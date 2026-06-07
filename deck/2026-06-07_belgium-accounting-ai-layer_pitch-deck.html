@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Belgium Accounting AI Layer — Pitch Deck</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a33;
+      --panel-2: #17213f;
+      --text: #eef2ff;
+      --muted: #aeb9d6;
+      --accent: #74c0fc;
+      --accent-2: #7ef0c2;
+      --line: rgba(255,255,255,0.12);
+      --warn: #ffd166;
+      --danger: #ff8c8c;
+      --shadow: 0 24px 60px rgba(0,0,0,0.35);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #162243 0%, var(--bg) 55%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    body {
+      display: grid;
+      place-items: center;
+    }
+    .deck {
+      height: 100vh;
+      width: 100vw;
+      position: relative;
+      overflow: hidden;
+    }
+    .stage {
+      width: 1600px;
+      height: 900px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+    }
+    .slide {
+      display: none;
+      width: 1600px;
+      height: 900px;
+      padding: 42px 82px 86px;
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(140deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+        linear-gradient(180deg, rgba(116,192,252,0.07), rgba(126,240,194,0.03));
+    }
+    .slide.active { display: grid; }
+    .slide.grid-hero { grid-template-rows: auto 1fr auto; }
+    .slide.grid-standard { grid-template-rows: auto auto 1fr; gap: 1.8vh; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.45rem 0.8rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--accent);
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+      background: rgba(255,255,255,0.04);
+      width: fit-content;
+    }
+    h1, h2 {
+      margin: 0;
+      line-height: 1.06;
+      letter-spacing: -0.03em;
+    }
+    h1 { font-size: clamp(2.8rem, 5vw, 5.4rem); max-width: 12ch; }
+    h2 { font-size: clamp(2rem, 3.5vw, 3.5rem); max-width: 14ch; }
+    .subtitle {
+      font-size: clamp(1.2rem, 2vw, 2rem);
+      color: var(--muted);
+      max-width: 42ch;
+      margin-top: 1rem;
+    }
+    .lede {
+      color: var(--muted);
+      font-size: clamp(1rem, 1.55vw, 1.35rem);
+      max-width: 62ch;
+      line-height: 1.5;
+      margin: 0;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 0.95fr;
+      gap: 2vw;
+      align-items: end;
+    }
+    .card, .quote, .metric, .cta-box {
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card { padding: 1.4rem 1.5rem; }
+    .quote { padding: 1.6rem 1.8rem; }
+    .metric {
+      padding: 1.25rem 1.3rem;
+      min-height: 100%;
+    }
+    .metric strong {
+      display: block;
+      font-size: 1rem;
+      color: var(--accent-2);
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .metric p, .quote p, .card p {
+      margin: 0;
+      color: var(--text);
+      line-height: 1.45;
+      font-size: clamp(1rem, 1.4vw, 1.22rem);
+    }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.2rem;
+      align-items: stretch;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+    }
+    ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      display: grid;
+      gap: 0.75rem;
+      color: var(--text);
+      font-size: clamp(1rem, 1.45vw, 1.28rem);
+      line-height: 1.4;
+    }
+    li::marker { color: var(--accent); }
+    .muted-list li::marker { color: var(--warn); }
+    .small-note {
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.45;
+    }
+    .workflow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.9rem;
+      align-items: stretch;
+    }
+    .step {
+      position: relative;
+      padding: 1.1rem 1rem;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      min-height: 180px;
+    }
+    .step span {
+      display: inline-block;
+      color: var(--accent-2);
+      font-weight: 700;
+      margin-bottom: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 0.9rem;
+    }
+    .step p {
+      margin: 0;
+      font-size: 1.05rem;
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      padding: 0.8rem 1rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      font-size: 1rem;
+    }
+    .danger { color: var(--danger); }
+    .warn { color: var(--warn); }
+    .accent { color: var(--accent); }
+    .footer {
+      position: absolute;
+      bottom: 2.4vh;
+      left: 5.2vw;
+      right: 5.2vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+    }
+    .progress {
+      height: 6px;
+      width: 200px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .progress > div {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 180ms ease;
+    }
+    .nav-hint { opacity: 0.9; }
+    .cta-box {
+      padding: 1.6rem 1.8rem;
+      display: grid;
+      gap: 1rem;
+    }
+    .cta-box strong {
+      font-size: 1.45rem;
+      color: var(--accent-2);
+    }
+    .pricing {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+    }
+    .price-card {
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      padding: 1.2rem 1.2rem 1.35rem;
+      min-height: 100%;
+    }
+    .price-card h3, .appendix h3 {
+      margin: 0 0 0.8rem;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+    .price-card .price {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 0.8rem;
+    }
+    .appendix {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .appendix .card { min-height: 230px; }
+    @media (max-width: 1200px) {
+      .hero-grid, .two-col, .three-col, .pricing, .appendix, .workflow, .metric-grid { grid-template-columns: 1fr; }
+      .slide { overflow-y: auto; }
+      html, body { overflow: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck" id="deck">
+    <div class="stage" id="stage">
+    <section class="slide grid-hero active">
+      <div class="eyebrow">Belgium Accounting AI Layer</div>
+      <div class="hero-grid">
+        <div>
+          <h1>De AI control- en closinglaag voor Belgische accounting firms</h1>
+          <p class="subtitle">Bovenop de bestaande softwarestack. Niet in plaats ervan.</p>
+          <p class="lede">Focus: dossiercontrole, review, close en reporting-voorbereiding. Geen nieuw boekhoudpakket. Geen autonome boekhouder. Wel een auditbare AI-layer voor meer grip op dossiers en minder manuele chaos.</p>
+        </div>
+        <div class="quote">
+          <p><strong class="accent">Positionering</strong><br>Een read-mostly AI control / review / close / reporting layer die werkt met uw bestaande boekhoudbron, mailbox en documentbron — met human-in-the-loop en audit trail ingebouwd.</p>
+        </div>
+      </div>
+      <div class="footer"><span>Cover</span><span class="nav-hint">← → of spatie om te navigeren</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Waarom dit nu relevant is</div>
+      <h2>De tools zijn er al. De keten ertussen werkt nog niet goed genoeg.</h2>
+      <div class="metric-grid">
+        <div class="metric"><strong>Mailboxen</strong><p>Klantopvragingen, reminders en opvolging blijven versnipperd en tijdrovend.</p></div>
+        <div class="metric"><strong>Reviewdruk</strong><p>Reviewers verliezen tijd met zoeken, interpreteren en escaleren in plaats van beslissen.</p></div>
+        <div class="metric"><strong>Close stress</strong><p>Blockers en uitzonderingen worden vaak te laat zichtbaar terwijl capaciteitsdruk stijgt.</p></div>
+      </div>
+      <div class="footer"><span>2 / 18</span><span>AI is nu bruikbaar als control layer, niet alleen als losse chatbot.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Het echte probleem</div>
+      <h2>De bottleneck zit vaak niet in het boekhoudpakket, maar tussen documenten, mailbox, review en close.</h2>
+      <div class="two-col">
+        <div class="card">
+          <ul>
+            <li>Onvolledige dossiers blokkeren review en close.</li>
+            <li>Klantopvragingen blijven repetitief en versnipperd.</li>
+            <li>Reviewers spenderen te veel tijd aan context verzamelen.</li>
+            <li>Partners zien risico’s en blockers te laat.</li>
+            <li>Reporting commentary komt te laat of te manueel tot stand.</li>
+          </ul>
+        </div>
+        <div class="quote">
+          <p><strong class="warn">Gevolg</strong><br>Meer last-minute werk, minder voorspelbaarheid, moeilijkere planning en te veel operationele ruis tussen systemen die elk op zich “werken”.</p>
+        </div>
+      </div>
+      <div class="footer"><span>3 / 18</span><span>We verkopen geen hype, maar een oplossing voor concrete workflow-frictie.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Wat wij expliciet niet doen</div>
+      <h2>Veilige scope = lagere weerstand</h2>
+      <div class="three-col">
+        <div class="card"><ul class="muted-list"><li>Geen nieuw boekhoudpakket</li><li>Geen volledige stackvervanging</li></ul></div>
+        <div class="card"><ul class="muted-list"><li>Geen autonome boekhouding</li><li>Geen fiscale filing automation in v1</li></ul></div>
+        <div class="card"><ul class="muted-list"><li>Geen black-box AI</li><li>Geen materiële acties zonder approval flow</li></ul></div>
+      </div>
+      <div class="footer"><span>4 / 18</span><span>Deze propositie is een control layer, niet een core replacement.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Onze positionering</div>
+      <h2>Eén AI-laag bovenop bestaande tools, ontworpen voor controle en uitvoerbaarheid.</h2>
+      <div class="two-col">
+        <div class="card">
+          <ul>
+            <li><strong>Read-mostly architectuur</strong> voor snelle waarde met lager implementatierisico.</li>
+            <li><strong>Human-in-the-loop</strong> voor vertrouwen, compliance en governance.</li>
+            <li><strong>Exception-driven workflows</strong> in plaats van generieke chat.</li>
+            <li><strong>Audit trail en bronverwijzingen</strong> per AI-output en beslissing.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <p><strong class="accent">Wedge</strong></p>
+          <p>Niet proberen “alles te doen”, maar beginnen waar de operationele druk het hoogst zit: dossiercompleetheid, review, close-status en reporting-voorbereiding.</p>
+        </div>
+      </div>
+      <div class="footer"><span>5 / 18</span><span>Snelle adoptie zonder dure core migratie.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Het product in één zin</div>
+      <h2>AI dossierreview en close cockpit voor Belgische accounting firms.</h2>
+      <div class="pill-row">
+        <div class="pill">Detecteert ontbrekende stukken</div>
+        <div class="pill">Signaleert uitzonderingen</div>
+        <div class="pill">Structureert klantopvragingen</div>
+        <div class="pill">Versnelt reviewer-beslissingen</div>
+        <div class="pill">Geeft partners vroeger zicht op blockers</div>
+      </div>
+      <div class="quote">
+        <p>De AI-laag helpt teams sneller van ruwe input naar een gecontroleerde review- en closingsituatie te gaan — zonder te doen alsof AI de eindverantwoordelijkheid overneemt.</p>
+      </div>
+      <div class="footer"><span>6 / 18</span><span>Heldere propositie, geen platform-jargon.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Hoe de oplossing werkt</div>
+      <h2>Van inputbronnen naar reviewer workbench en close cockpit.</h2>
+      <div class="workflow">
+        <div class="step"><span>1. Lezen</span><p>Leest data uit boekhoudbron, gedeelde mailbox en documentbron.</p></div>
+        <div class="step"><span>2. Structureren</span><p>Maakt dossiercontext, requests, findings en statusinformatie bruikbaar.</p></div>
+        <div class="step"><span>3. Signaleren</span><p>Detecteert ontbrekende stukken, afwijkingen en blockers.</p></div>
+        <div class="step"><span>4. Assisteren</span><p>Genereert concepten en summaries met bronverwijzingen.</p></div>
+        <div class="step"><span>5. Beslissen</span><p>Toont alles in reviewer workbench en close cockpit met menselijke goedkeuring.</p></div>
+      </div>
+      <div class="footer"><span>7 / 18</span><span>Workflow-first, niet demo-first.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Kern use cases in v1</div>
+      <h2>Eerste scope die concreet genoeg is om te verkopen en klein genoeg om te implementeren.</h2>
+      <div class="three-col">
+        <div class="card"><ul><li>Dossiercompleetheid</li><li>Ontbrekende-stukken detectie</li></ul></div>
+        <div class="card"><ul><li>Klantopvragingen</li><li>Follow-up orchestration</li></ul></div>
+        <div class="card"><ul><li>Review findings</li><li>Close cockpit</li><li>Reviewer summary</li></ul></div>
+      </div>
+      <div class="footer"><span>8 / 18</span><span>Geen brede chatbot, wel operationele wedge.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Waarom dit beter is dan nog een tool</div>
+      <h2>De waarde zit in orkestratie en controle, niet in nóg een los scherm.</h2>
+      <div class="two-col">
+        <div class="card">
+          <ul>
+            <li>Sluit aan op de bestaande stack in plaats van migratie te forceren.</li>
+            <li>Combineert document, e-mail, control en close in één laag.</li>
+            <li>Bouwt auditbaarheid en approval flows mee in.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <ul>
+            <li>Richt zich op echte bottlenecks in plaats van generieke AI-features.</li>
+            <li>Waarde is binnen een afgebakende pilot meetbaar.</li>
+            <li>Laat teams AI gecontroleerd adopteren zonder black-box gedrag.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer"><span>9 / 18</span><span>Dit is een bovenliggende orchestration layer.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Ideale design partner</div>
+      <h2>De beste fit herkent zichzelf snel.</h2>
+      <div class="metric-grid">
+        <div class="metric"><strong>Profiel</strong><p>Belgisch kantoor met ongeveer 10–80 medewerkers en veel terugkerende kmo-dossiers.</p></div>
+        <div class="metric"><strong>Huidige realiteit</strong><p>Duidelijke reviewflow, maar gefragmenteerde tooling en te veel manuele opvolging.</p></div>
+        <div class="metric"><strong>Bereidheid</strong><p>Wil geen core replacement, maar kan wel 30–50 dossiers afbakenen voor een pilot.</p></div>
+      </div>
+      <div class="footer"><span>10 / 18</span><span>ICP = operationele pijn + bereidheid tot afgebakende pilot.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Pilot scope</div>
+      <h2>Klein genoeg om beheersbaar te zijn. Groot genoeg om echte waarde te bewijzen.</h2>
+      <div class="pricing">
+        <div class="price-card"><h3>Scope</h3><ul><li>1 kantoor</li><li>1 team</li><li>30–50 dossiers</li></ul></div>
+        <div class="price-card"><h3>Bronnen</h3><ul><li>1 boekhoudbron</li><li>1 gedeelde mailbox</li><li>1 documentbron</li></ul></div>
+        <div class="price-card"><h3>Cadans</h3><ul><li>8–12 weken</li><li>Baseline</li><li>Wekelijkse evaluatie</li></ul></div>
+      </div>
+      <div class="footer"><span>11 / 18</span><span>Scope discipline voorkomt innovatie-theater en scope creep.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Wat de pilot oplevert</div>
+      <h2>Geen verhaal over “AI”, maar een beslisbasis voor operationele uitrol.</h2>
+      <div class="two-col">
+        <div class="card">
+          <ul>
+            <li>Sneller zicht op ontbrekende stukken</li>
+            <li>Minder manuele follow-up</li>
+            <li>Kortere reviewloops</li>
+          </ul>
+        </div>
+        <div class="card">
+          <ul>
+            <li>Vroeger zicht op close blockers</li>
+            <li>Consistentere voorbereiding voor reviewer en partner</li>
+            <li>Duidelijke go / no-go / expand beslissing</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer"><span>12 / 18</span><span>De pilot moet bewijs leveren, geen innovatieverhaal.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Succescriteria en KPI’s</div>
+      <h2>Meetbaar vanaf dag één.</h2>
+      <div class="three-col">
+        <div class="card"><ul><li>Reviewtijd per dossier</li><li>% dossiers volledig vóór deadline</li></ul></div>
+        <div class="card"><ul><li>Tijd tot ontbrekende stukken worden aangeleverd</li><li>Aantal open exceptions per close</li></ul></div>
+        <div class="card"><ul><li>Bruikbaarheid van AI-output</li><li>False-positive niveau en confidence handling</li></ul></div>
+      </div>
+      <div class="footer"><span>13 / 18</span><span>Baseline + wekelijkse review + eindbesluit.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Governance en vertrouwen</div>
+      <h2>AI moet auditbaar zijn om bruikbaar te zijn in accountancy.</h2>
+      <div class="two-col">
+        <div class="card">
+          <ul>
+            <li>Human-in-the-loop blijft standaard.</li>
+            <li>Bronverwijzingen en explainability per output.</li>
+            <li>Audit trail per AI-output en beslissing.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <ul>
+            <li>Approval gates voor externe communicatie en materiële acties.</li>
+            <li>Read-mostly start houdt operationeel risico laag.</li>
+            <li>AI is beslissingsondersteunend, geen professionele vervanging.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer"><span>14 / 18</span><span>Veilige adoptie is een onderdeel van de propositie, niet een voetnoot.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Verwachte bezwaren</div>
+      <h2>De meest waarschijnlijke weerstand is legitiem — en adresseerbaar.</h2>
+      <div class="three-col">
+        <div class="card"><p><strong class="warn">“Wij willen geen implementatieproject.”</strong><br>Daarom is de pilotscope bewust klein en afgebakend.</p></div>
+        <div class="card"><p><strong class="warn">“AI is te onbetrouwbaar.”</strong><br>Daarom werken we met confidence handling, bronverwijzingen en menselijke review.</p></div>
+        <div class="card"><p><strong class="warn">“Onze stack is al complex.”</strong><br>Net daarom is een bovenliggende orchestration layer logischer dan nóg een core project.</p></div>
+      </div>
+      <div class="footer"><span>15 / 18</span><span>Bewijs, governance en scope discipline moeten de weerstand verlagen.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Commerciële structuur</div>
+      <h2>Serieuze pilot. Beheersbaar commitment.</h2>
+      <div class="pricing">
+        <div class="price-card">
+          <h3>Setup</h3>
+          <div class="price">€15.000</div>
+          <p class="small-note">Onboarding, bronmapping, pilotscope, workflowconfiguratie, baseline en governance.</p>
+        </div>
+        <div class="price-card">
+          <h3>Maandfee</h3>
+          <div class="price">€5.500 / maand</div>
+          <p class="small-note">Platformtoegang, verwerking, wekelijkse pilot review, tuning binnen scope en operationele support.</p>
+        </div>
+        <div class="price-card">
+          <h3>Minimum</h3>
+          <div class="price">3 maanden</div>
+          <p class="small-note">Typische pilotwaarde: €31.500 voor 30–50 dossiers, 1 team, 1 boekhoudbron, 1 mailbox en 1 documentbron.</p>
+        </div>
+      </div>
+      <div class="footer"><span>16 / 18</span><span>Niet geprijsd als goedkoop seat-tool, niet geprijsd als ERP-transformatie.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Waarom nu met ons praten</div>
+      <h2>Wie vroeg instapt, beïnvloedt de productrichting én test gecontroleerd.</h2>
+      <div class="two-col">
+        <div class="card">
+          <ul>
+            <li>Vroege design partners helpen workflow- en productkeuzes mee sturen.</li>
+            <li>Gecontroleerde AI-adoptie zonder core replacement.</li>
+            <li>Focus op Belgische kantoorrealiteit in plaats van generieke internationale softwareverhalen.</li>
+          </ul>
+        </div>
+        <div class="cta-box">
+          <strong>Volgende stap</strong>
+          <p style="margin:0; line-height:1.5; color:var(--text);">Plan een 45-minuten pilot fit gesprek. Breng uw huidige review-, close- en dossierflow mee. Wij toetsen fit, scope en KPI-kader en bezorgen nadien een concreet pilotvoorstel.</p>
+        </div>
+      </div>
+      <div class="footer"><span>17 / 18</span><span>CTA = pilot fit gesprek, niet vrijblijvende demo.</span></div>
+    </section>
+
+    <section class="slide grid-standard">
+      <div class="eyebrow">Appendix</div>
+      <h2>Snelle extra slides voor vervolggesprekken</h2>
+      <div class="appendix">
+        <div class="card appendix">
+          <div>
+            <h3>Voorbeeld pilotflow</h3>
+            <ul>
+              <li>Document komt binnen</li>
+              <li>AI classificeert</li>
+              <li>Dossier toont ontbrekend stuk</li>
+              <li>Concept klantmail wordt voorbereid</li>
+              <li>Finding verschijnt in review</li>
+              <li>Close cockpit kleurt dossierstatus</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card appendix">
+          <div>
+            <h3>Appendix topics</h3>
+            <ul>
+              <li>In scope versus out of scope</li>
+              <li>KPI-baseline template</li>
+              <li>Integratie-aanpak op hoofdlijnen</li>
+              <li>Procurement / IT one-slide summary</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>18 / 18</span><span id="slide-count-bottom">Gebruik pijltjes of spatie om door de deck te gaan.</span></div>
+    </section>
+    </div>
+
+    <div class="footer" style="pointer-events:none; bottom:16px; left:24px; right:24px; position:fixed;">
+      <div id="counter">1 / 18</div>
+      <div class="progress"><div id="progress-bar"></div></div>
+    </div>
+  </div>
+
+  <script>
+    const stage = document.getElementById('stage');
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const counter = document.getElementById('counter');
+    const progressBar = document.getElementById('progress-bar');
+    let index = 0;
+
+    function fitStage() {
+      const scale = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+      const x = (window.innerWidth - 1600 * scale) / 2;
+      const y = (window.innerHeight - 900 * scale) / 2;
+      stage.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+    }
+
+    function renderSlide(next) {
+      index = (next + slides.length) % slides.length;
+      slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+      counter.textContent = `${index + 1} / ${slides.length}`;
+      progressBar.style.width = `${((index + 1) / slides.length) * 100}%`;
+      document.title = `(${index + 1}/${slides.length}) Belgium Accounting AI Layer — Pitch Deck`;
+    }
+
+    function nextSlide() { renderSlide(index + 1); }
+    function prevSlide() { renderSlide(index - 1); }
+
+    document.addEventListener('keydown', (event) => {
+      if (["ArrowRight", "PageDown", " ", "Spacebar", "Enter"].includes(event.key)) {
+        event.preventDefault();
+        nextSlide();
+      }
+      if (["ArrowLeft", "PageUp", "Backspace"].includes(event.key)) {
+        event.preventDefault();
+        prevSlide();
+      }
+      if (event.key.toLowerCase() === 'home') {
+        event.preventDefault();
+        renderSlide(0);
+      }
+      if (event.key.toLowerCase() === 'end') {
+        event.preventDefault();
+        renderSlide(slides.length - 1);
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      const halfway = window.innerWidth / 2;
+      if (event.clientX >= halfway) nextSlide();
+      else prevSlide();
+    });
+
+    window.addEventListener('resize', fitStage);
+    fitStage();
+    renderSlide(0);
+  </script>
+</body>
+</html>

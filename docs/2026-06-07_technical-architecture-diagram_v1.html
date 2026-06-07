@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Belgium Accounting AI Layer — Technical Architecture Diagram v1</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: #0d1728;
+      --panel-2: #101d31;
+      --card: #13233b;
+      --card-2: #152742;
+      --line: #27476f;
+      --text: #e8f1ff;
+      --muted: #99acc9;
+      --accent: #6ee7ff;
+      --accent-2: #76f7c5;
+      --accent-3: #b896ff;
+      --accent-4: #ffcf70;
+      --danger: #ff7a9d;
+      --ok: #8ef0b6;
+      --shadow: 0 20px 60px rgba(0,0,0,.35);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(110,231,255,.10), transparent 26%),
+        radial-gradient(circle at top right, rgba(184,150,255,.10), transparent 24%),
+        linear-gradient(180deg, #07111f 0%, #091523 100%);
+      color: var(--text);
+    }
+
+    .wrap {
+      width: min(1680px, calc(100vw - 32px));
+      margin: 24px auto 40px;
+      padding: 24px;
+      background: rgba(8, 15, 28, .72);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .title h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 3vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -.03em;
+    }
+
+    .title p {
+      margin: 0;
+      max-width: 980px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.09);
+      background: rgba(255,255,255,.04);
+      font-size: 12px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .meta {
+      min-width: 280px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(20,39,66,.92), rgba(13,23,40,.92));
+      border: 1px solid rgba(110,231,255,.18);
+    }
+
+    .meta strong { display: block; margin-bottom: 8px; font-size: 13px; color: var(--accent); }
+    .meta div { color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+    .diagram-shell {
+      margin-top: 18px;
+      border-radius: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(13,23,40,.94), rgba(8,13,23,.98));
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      background:
+        linear-gradient(180deg, rgba(10,18,31,.96), rgba(7,13,23,1));
+    }
+
+    .notes {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .note {
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(16,29,49,.95), rgba(11,20,35,.95));
+      border: 1px solid rgba(255,255,255,.07);
+    }
+
+    .note h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      color: var(--accent);
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    .note p, .note li {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .note ul { margin: 8px 0 0 18px; padding: 0; }
+
+    @media (max-width: 1100px) {
+      .notes { grid-template-columns: 1fr; }
+      .wrap { width: min(100vw - 16px, 1680px); padding: 16px; margin: 12px auto 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="title">
+        <h1>Belgium Accounting AI Layer — VPS-first technical architecture</h1>
+        <p>
+          Zelfstandige architectuurvisualisatie van een <strong>AI control / review / close / reporting layer</strong>
+          bovenop bestaande boekhoudpakketten, mailboxen en documentbronnen. De focus ligt op een
+          <strong>read-mostly, human-in-the-loop, auditabele</strong> MVP-architectuur voor Belgische boekhoudkantoren.
+        </p>
+        <div class="badges">
+          <span class="badge">Niet: core replacement</span>
+          <span class="badge">Wel: orchestration & control layer</span>
+          <span class="badge">VPS-first deployment boundary</span>
+          <span class="badge">Read-mostly v1</span>
+          <span class="badge">Human approval gates</span>
+          <span class="badge">Audit trail by design</span>
+        </div>
+      </div>
+      <div class="meta">
+        <strong>Scope & positionering</strong>
+        <div>Voor strategisch én technisch gebruik.</div>
+        <div>Bronnarratief: één platformervaring bovenop de bestaande stack.</div>
+        <div>Deploymentsuggestie: app + data + workers binnen beheerde VPS-zone, met externe AI en bronconnectors eromheen.</div>
+      </div>
+    </div>
+
+    <div class="diagram-shell">
+      <svg viewBox="0 0 1680 1120" role="img" aria-labelledby="title desc">
+        <title id="title">Belgium Accounting AI Layer technical architecture diagram</title>
+        <desc id="desc">Diagram van gebruikers, cockpits, backend services, connectorlaag, canonical data layer, AI services, governance, VPS-boundary, security, backups en observability.</desc>
+
+        <defs>
+          <linearGradient id="panelGrad" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#152742" />
+            <stop offset="100%" stop-color="#0f1d31" />
+          </linearGradient>
+          <linearGradient id="vpsGrad" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#0d1728" />
+            <stop offset="100%" stop-color="#091321" />
+          </linearGradient>
+          <linearGradient id="accentGrad" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stop-color="#6ee7ff" />
+            <stop offset="100%" stop-color="#76f7c5" />
+          </linearGradient>
+          <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#000000" flood-opacity="0.35" />
+          </filter>
+          <marker id="arrowA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6ee7ff"></path>
+          </marker>
+          <marker id="arrowB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffcf70"></path>
+          </marker>
+          <marker id="arrowC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#b896ff"></path>
+          </marker>
+          <style>
+            .zone { fill: none; stroke-width: 2; rx: 26; }
+            .title-lg { font: 700 18px Inter, sans-serif; fill: #e8f1ff; }
+            .title-md { font: 700 15px Inter, sans-serif; fill: #e8f1ff; }
+            .title-sm { font: 700 13px Inter, sans-serif; fill: #e8f1ff; }
+            .body { font: 500 12.5px Inter, sans-serif; fill: #99acc9; }
+            .small { font: 500 11px Inter, sans-serif; fill: #99acc9; }
+            .micro { font: 600 10px Inter, sans-serif; fill: #99acc9; letter-spacing: .08em; text-transform: uppercase; }
+            .chip { font: 700 11px Inter, sans-serif; fill: #07111f; }
+            .label { font: 700 12px Inter, sans-serif; fill: #07111f; }
+            .light { fill: #e8f1ff; }
+          </style>
+        </defs>
+
+        <rect x="0" y="0" width="1680" height="1120" fill="#07111f" />
+        <g opacity="0.10">
+          <path d="M40 140 H1640" stroke="#6ee7ff" stroke-width="1" />
+          <path d="M40 280 H1640" stroke="#6ee7ff" stroke-width="1" />
+          <path d="M40 420 H1640" stroke="#6ee7ff" stroke-width="1" />
+          <path d="M40 560 H1640" stroke="#6ee7ff" stroke-width="1" />
+          <path d="M40 700 H1640" stroke="#6ee7ff" stroke-width="1" />
+          <path d="M40 840 H1640" stroke="#6ee7ff" stroke-width="1" />
+          <path d="M40 980 H1640" stroke="#6ee7ff" stroke-width="1" />
+          <path d="M210 40 V1080" stroke="#6ee7ff" stroke-width="1" />
+          <path d="M520 40 V1080" stroke="#6ee7ff" stroke-width="1" />
+          <path d="M860 40 V1080" stroke="#6ee7ff" stroke-width="1" />
+          <path d="M1200 40 V1080" stroke="#6ee7ff" stroke-width="1" />
+          <path d="M1490 40 V1080" stroke="#6ee7ff" stroke-width="1" />
+        </g>
+
+        <rect x="30" y="30" width="1620" height="1060" rx="30" fill="none" stroke="#27476f" stroke-width="2.4" stroke-dasharray="10 8" />
+        <text x="52" y="58" class="micro" fill="#6ee7ff">Strategic view: AI layer above existing systems</text>
+
+        <rect x="250" y="95" width="1230" height="860" rx="30" fill="url(#vpsGrad)" stroke="#6ee7ff" stroke-width="2.2" filter="url(#shadow)" />
+        <text x="280" y="128" class="title-lg" fill="#6ee7ff">Managed VPS / private network boundary</text>
+        <text x="280" y="150" class="body">VPS-first deployment for web app, APIs, data services, queues, workers, observability and encrypted storage.</text>
+
+        <rect x="270" y="175" width="1190" height="735" rx="24" fill="none" stroke="#ffcf70" stroke-width="2" stroke-dasharray="8 7" />
+        <text x="290" y="205" class="title-md" fill="#ffcf70">Audit, security & policy boundary</text>
+        <text x="290" y="225" class="body">RBAC · tenant isolation · audit trail · approval gates · retention policy · prompt/output logging · encryption</text>
+
+        <rect x="60" y="120" width="150" height="350" rx="22" fill="url(#panelGrad)" stroke="#27476f" stroke-width="2" />
+        <text x="80" y="153" class="title-md">Users</text>
+
+        <rect x="78" y="175" width="114" height="92" rx="16" fill="#17304d" stroke="#6ee7ff" stroke-width="1.6" />
+        <text x="95" y="202" class="title-sm">Boekhoud-</text>
+        <text x="95" y="219" class="title-sm">kantoor</text>
+        <text x="95" y="236" class="body">Dossierbeheerder</text>
+        <text x="95" y="252" class="body">Reviewer · Partner</text>
+
+        <rect x="78" y="285" width="114" height="92" rx="16" fill="#17304d" stroke="#76f7c5" stroke-width="1.6" />
+        <text x="95" y="312" class="title-sm">Klant-</text>
+        <text x="95" y="329" class="title-sm">bedrijven</text>
+        <text x="95" y="346" class="body">Finance contact</text>
+        <text x="95" y="362" class="body">Management</text>
+
+        <rect x="78" y="395" width="114" height="54" rx="14" fill="#17304d" stroke="#b896ff" stroke-width="1.6" />
+        <text x="95" y="427" class="body">Human-in-the-loop</text>
+
+        <rect x="65" y="520" width="170" height="500" rx="22" fill="url(#panelGrad)" stroke="#27476f" stroke-width="2" />
+        <text x="86" y="552" class="title-md">Existing systems</text>
+        <text x="86" y="574" class="body">Remain system-of-record</text>
+
+        <g>
+          <rect x="82" y="595" width="136" height="62" rx="14" fill="#142640" stroke="#6ee7ff" stroke-width="1.4" />
+          <text x="98" y="620" class="title-sm">Boekhoudpakket</text>
+          <text x="98" y="637" class="body">Exact · Yuki ·</text>
+          <text x="98" y="653" class="body">Twinfield · Odoo</text>
+
+          <rect x="82" y="672" width="136" height="62" rx="14" fill="#142640" stroke="#76f7c5" stroke-width="1.4" />
+          <text x="98" y="697" class="title-sm">Mailbox</text>
+          <text x="98" y="714" class="body">Microsoft 365</text>
+          <text x="98" y="730" class="body">Gmail shared inbox</text>
+
+          <rect x="82" y="749" width="136" height="62" rx="14" fill="#142640" stroke="#ffcf70" stroke-width="1.4" />
+          <text x="98" y="774" class="title-sm">Document store</text>
+          <text x="98" y="791" class="body">SharePoint</text>
+          <text x="98" y="807" class="body">Drive · uploads</text>
+
+          <rect x="82" y="826" width="136" height="62" rx="14" fill="#142640" stroke="#b896ff" stroke-width="1.4" />
+          <text x="98" y="851" class="title-sm">Bank / CODA</text>
+          <text x="98" y="868" class="body">CodaBox · Isabel</text>
+          <text x="98" y="884" class="body">transactions</text>
+
+          <rect x="82" y="903" width="136" height="90" rx="14" fill="#142640" stroke="#ff7a9d" stroke-width="1.4" />
+          <text x="98" y="928" class="title-sm">Other sources</text>
+          <text x="98" y="945" class="body">Peppol / UBL</text>
+          <text x="98" y="961" class="body">Payroll outputs</text>
+          <text x="98" y="977" class="body">Practice mgmt / CRM</text>
+        </g>
+
+        <rect x="300" y="270" width="300" height="190" rx="20" fill="url(#panelGrad)" stroke="#6ee7ff" stroke-width="1.8" />
+        <text x="324" y="302" class="title-md">Frontend / cockpit layer</text>
+        <text x="324" y="323" class="body">Single platform experience for office teams and clients</text>
+
+        <rect x="322" y="342" width="122" height="46" rx="12" fill="#17304d" stroke="#6ee7ff" stroke-width="1.2" />
+        <text x="338" y="370" class="body">Reviewer workbench</text>
+
+        <rect x="456" y="342" width="122" height="46" rx="12" fill="#17304d" stroke="#76f7c5" stroke-width="1.2" />
+        <text x="485" y="370" class="body">Close cockpit</text>
+
+        <rect x="322" y="398" width="122" height="46" rx="12" fill="#17304d" stroke="#ffcf70" stroke-width="1.2" />
+        <text x="346" y="426" class="body">Request portal</text>
+
+        <rect x="456" y="398" width="122" height="46" rx="12" fill="#17304d" stroke="#b896ff" stroke-width="1.2" />
+        <text x="473" y="426" class="body">Reporting views</text>
+
+        <rect x="645" y="250" width="420" height="235" rx="22" fill="url(#panelGrad)" stroke="#76f7c5" stroke-width="1.8" />
+        <text x="670" y="282" class="title-md">API / backend services</text>
+        <text x="670" y="304" class="body">Read-mostly orchestration, workflow and domain APIs</text>
+
+        <g>
+          <rect x="670" y="324" width="170" height="52" rx="14" fill="#17304d" stroke="#76f7c5" stroke-width="1.2" />
+          <text x="688" y="344" class="title-sm">Workflow API</text>
+          <text x="688" y="362" class="body">requests · findings · status</text>
+
+          <rect x="852" y="324" width="188" height="52" rx="14" fill="#17304d" stroke="#6ee7ff" stroke-width="1.2" />
+          <text x="870" y="344" class="title-sm">Review / close service</text>
+          <text x="870" y="362" class="body">checklists · sign-off · blockers</text>
+
+          <rect x="670" y="388" width="170" height="52" rx="14" fill="#17304d" stroke="#ffcf70" stroke-width="1.2" />
+          <text x="688" y="408" class="title-sm">Client comms service</text>
+          <text x="688" y="426" class="body">drafts · approvals · send rules</text>
+
+          <rect x="852" y="388" width="188" height="52" rx="14" fill="#17304d" stroke="#b896ff" stroke-width="1.2" />
+          <text x="870" y="408" class="title-sm">Reporting / summary API</text>
+          <text x="870" y="426" class="body">narratives · evidence-linked outputs</text>
+
+          <rect x="726" y="448" width="256" height="24" rx="12" fill="url(#accentGrad)" />
+          <text x="775" y="465" class="chip">AI control / review / close / reporting layer</text>
+        </g>
+
+        <rect x="300" y="510" width="335" height="245" rx="22" fill="url(#panelGrad)" stroke="#ffcf70" stroke-width="1.8" />
+        <text x="324" y="542" class="title-md">Connector & ingestion layer</text>
+        <text x="324" y="564" class="body">Brings external data in without replacing source systems</text>
+
+        <g>
+          <rect x="323" y="584" width="130" height="48" rx="12" fill="#17304d" stroke="#6ee7ff" stroke-width="1.2" />
+          <text x="345" y="613" class="body">Accounting connectors</text>
+
+          <rect x="468" y="584" width="144" height="48" rx="12" fill="#17304d" stroke="#76f7c5" stroke-width="1.2" />
+          <text x="499" y="613" class="body">Email ingestion</text>
+
+          <rect x="323" y="645" width="130" height="48" rx="12" fill="#17304d" stroke="#ffcf70" stroke-width="1.2" />
+          <text x="351" y="674" class="body">Document ingest</text>
+
+          <rect x="468" y="645" width="144" height="48" rx="12" fill="#17304d" stroke="#b896ff" stroke-width="1.2" />
+          <text x="492" y="674" class="body">Webhook / schedulers</text>
+
+          <rect x="323" y="706" width="289" height="28" rx="14" fill="#1b3354" stroke="#27476f" stroke-width="1" />
+          <text x="382" y="725" class="body">Normalization · delta sync · dedup · source evidence links</text>
+        </g>
+
+        <rect x="665" y="525" width="400" height="210" rx="22" fill="url(#panelGrad)" stroke="#6ee7ff" stroke-width="1.8" />
+        <text x="690" y="557" class="title-md">Canonical data layer</text>
+        <text x="690" y="579" class="body">Normalized dossier and period model across source systems</text>
+
+        <g>
+          <rect x="689" y="600" width="352" height="103" rx="16" fill="#17304d" stroke="#6ee7ff" stroke-width="1.2" />
+          <text x="708" y="624" class="title-sm">Canonical DB (Postgres-style relational core)</text>
+          <text x="708" y="646" class="body">Client · Dossier · Legal Entity · Reporting Period</text>
+          <text x="708" y="666" class="body">GL Entries · Journals · Bank Tx · VAT Records</text>
+          <text x="708" y="686" class="body">Requests · Findings · Close Status · AI Recommendations · Audit Events</text>
+        </g>
+
+        <rect x="1100" y="250" width="320" height="320" rx="22" fill="url(#panelGrad)" stroke="#b896ff" stroke-width="1.8" />
+        <text x="1124" y="282" class="title-md">AI services & policy layer</text>
+        <text x="1124" y="304" class="body">Assistive intelligence under governance, not autonomous bookkeeping</text>
+
+        <g>
+          <rect x="1124" y="324" width="126" height="46" rx="12" fill="#17304d" stroke="#6ee7ff" stroke-width="1.2" />
+          <text x="1151" y="352" class="body">OCR / extractie</text>
+
+          <rect x="1262" y="324" width="134" height="46" rx="12" fill="#17304d" stroke="#76f7c5" stroke-width="1.2" />
+          <text x="1288" y="352" class="body">Classificatie</text>
+
+          <rect x="1124" y="382" width="126" height="46" rx="12" fill="#17304d" stroke="#ffcf70" stroke-width="1.2" />
+          <text x="1154" y="410" class="body">Matching</text>
+
+          <rect x="1262" y="382" width="134" height="46" rx="12" fill="#17304d" stroke="#b896ff" stroke-width="1.2" />
+          <text x="1277" y="410" class="body">Controls engine</text>
+
+          <rect x="1124" y="440" width="126" height="46" rx="12" fill="#17304d" stroke="#ff7a9d" stroke-width="1.2" />
+          <text x="1140" y="468" class="body">Anomaly detection</text>
+
+          <rect x="1262" y="440" width="134" height="46" rx="12" fill="#17304d" stroke="#8ef0b6" stroke-width="1.2" />
+          <text x="1288" y="468" class="body">LLM summaries</text>
+
+          <rect x="1124" y="504" width="272" height="42" rx="14" fill="#1b3354" stroke="#27476f" stroke-width="1" />
+          <text x="1142" y="530" class="body">Policy enforcement: source-bounded context · confidence thresholds · “insufficient evidence” fallback</text>
+        </g>
+
+        <rect x="1100" y="595" width="320" height="165" rx="22" fill="url(#panelGrad)" stroke="#76f7c5" stroke-width="1.8" />
+        <text x="1124" y="627" class="title-md">Queue, workers & automation</text>
+        <text x="1124" y="649" class="body">Async processing for scalable ingestion and review preparation</text>
+
+        <g>
+          <rect x="1124" y="669" width="272" height="28" rx="14" fill="#17304d" stroke="#76f7c5" stroke-width="1.1" />
+          <text x="1178" y="688" class="body">Job queue · retry logic · dead-letter handling</text>
+          <rect x="1124" y="705" width="272" height="28" rx="14" fill="#17304d" stroke="#76f7c5" stroke-width="1.1" />
+          <text x="1170" y="724" class="body">Workers: OCR, sync, controls, summaries, notifications</text>
+        </g>
+
+        <rect x="665" y="760" width="400" height="130" rx="22" fill="url(#panelGrad)" stroke="#ffcf70" stroke-width="1.8" />
+        <text x="690" y="792" class="title-md">Persistent storage</text>
+        <text x="690" y="814" class="body">Separated structured state and evidence blobs</text>
+        <rect x="689" y="832" width="170" height="36" rx="12" fill="#17304d" stroke="#6ee7ff" stroke-width="1.2" />
+        <text x="733" y="855" class="body">Canonical DB</text>
+        <rect x="871" y="832" width="170" height="36" rx="12" fill="#17304d" stroke="#76f7c5" stroke-width="1.2" />
+        <text x="897" y="855" class="body">Object storage</text>
+        <text x="888" y="872" class="small">documents · attachments · exports · evidence packs</text>
+
+        <rect x="300" y="780" width="335" height="110" rx="22" fill="url(#panelGrad)" stroke="#ff7a9d" stroke-width="1.8" />
+        <text x="324" y="812" class="title-md">Governance & security controls</text>
+        <text x="324" y="834" class="body">RBAC · tenant isolation · approval gates · audit log service</text>
+        <text x="324" y="856" class="body">Encryption in transit/at rest · retention policies · no training on client data by default</text>
+
+        <rect x="1100" y="790" width="320" height="100" rx="22" fill="url(#panelGrad)" stroke="#6ee7ff" stroke-width="1.8" />
+        <text x="1124" y="822" class="title-md">Observability & recovery</text>
+        <text x="1124" y="844" class="body">Logs · metrics · traces · alerting · encrypted backups · restore testing</text>
+        <text x="1124" y="865" class="body">Supports pilot KPI visibility and operational trust</text>
+
+        <rect x="1475" y="160" width="145" height="260" rx="22" fill="url(#panelGrad)" stroke="#27476f" stroke-width="2" />
+        <text x="1496" y="192" class="title-md">External AI / infra</text>
+        <text x="1496" y="214" class="body">Optional external services with policy mediation</text>
+
+        <rect x="1494" y="240" width="106" height="54" rx="14" fill="#142640" stroke="#b896ff" stroke-width="1.4" />
+        <text x="1518" y="271" class="body">LLM provider</text>
+
+        <rect x="1494" y="307" width="106" height="54" rx="14" fill="#142640" stroke="#6ee7ff" stroke-width="1.4" />
+        <text x="1521" y="338" class="body">OCR API</text>
+
+        <rect x="1494" y="374" width="106" height="28" rx="14" fill="#142640" stroke="#76f7c5" stroke-width="1.4" />
+        <text x="1510" y="393" class="body">EU-hosting pref.</text>
+
+        <rect x="1475" y="470" width="145" height="180" rx="22" fill="url(#panelGrad)" stroke="#27476f" stroke-width="2" />
+        <text x="1496" y="502" class="title-md">Outputs</text>
+        <text x="1496" y="524" class="body">Controlled downstream delivery</text>
+        <text x="1496" y="551" class="body">• reviewer decisions</text>
+        <text x="1496" y="573" class="body">• close sign-off</text>
+        <text x="1496" y="595" class="body">• client requests</text>
+        <text x="1496" y="617" class="body">• report drafts</text>
+
+        <rect x="1475" y="700" width="145" height="180" rx="22" fill="url(#panelGrad)" stroke="#27476f" stroke-width="2" />
+        <text x="1496" y="732" class="title-md">Legend</text>
+        <rect x="1496" y="753" width="24" height="10" rx="5" fill="#6ee7ff" />
+        <text x="1530" y="763" class="small">Primary data flow</text>
+        <rect x="1496" y="782" width="24" height="10" rx="5" fill="#ffcf70" />
+        <text x="1530" y="792" class="small">Control / approval</text>
+        <rect x="1496" y="811" width="24" height="10" rx="5" fill="#b896ff" />
+        <text x="1530" y="821" class="small">AI policy flow</text>
+        <rect x="1496" y="840" width="24" height="10" rx="5" fill="#76f7c5" />
+        <text x="1530" y="850" class="small">Storage / async</text>
+
+        <path d="M192 221 C232 221, 250 310, 300 330" fill="none" stroke="#6ee7ff" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M192 331 C238 331, 252 380, 300 412" fill="none" stroke="#76f7c5" stroke-width="3" marker-end="url(#arrowA)" />
+
+        <path d="M218 626 C257 626, 264 606, 323 606" fill="none" stroke="#6ee7ff" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M218 703 C258 703, 279 669, 468 669" fill="none" stroke="#76f7c5" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M218 780 C257 780, 276 669, 323 669" fill="none" stroke="#ffcf70" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M218 857 C248 857, 267 620, 323 606" fill="none" stroke="#b896ff" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M218 948 C272 948, 280 694, 468 669" fill="none" stroke="#ff7a9d" stroke-width="3" marker-end="url(#arrowA)" />
+
+        <path d="M600 365 H645" fill="none" stroke="#6ee7ff" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M635 635 H665" fill="none" stroke="#6ee7ff" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M865 485 V525" fill="none" stroke="#6ee7ff" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M1065 630 H1100" fill="none" stroke="#76f7c5" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M1065 630 C1095 630,1080 440,1100 440" fill="none" stroke="#b896ff" stroke-width="3" marker-end="url(#arrowC)" />
+        <path d="M1260 570 V595" fill="none" stroke="#76f7c5" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M865 735 V760" fill="none" stroke="#76f7c5" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M1065 355 C1095 355,1068 350,1100 350" fill="none" stroke="#b896ff" stroke-width="3" marker-end="url(#arrowC)" />
+        <path d="M1420 350 C1452 350,1452 267,1494 267" fill="none" stroke="#b896ff" stroke-width="3" marker-end="url(#arrowC)" />
+        <path d="M1420 670 C1450 670,1450 560,1475 560" fill="none" stroke="#ffcf70" stroke-width="3" marker-end="url(#arrowB)" />
+        <path d="M600 730 C660 730,620 820,665 820" fill="none" stroke="#76f7c5" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M1065 820 H1100" fill="none" stroke="#76f7c5" stroke-width="3" marker-end="url(#arrowA)" />
+        <path d="M635 835 H665" fill="none" stroke="#ffcf70" stroke-width="3" marker-end="url(#arrowB)" />
+        <path d="M1240 250 C1240 212, 1390 212, 1475 212" fill="none" stroke="#b896ff" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arrowC)" />
+
+        <rect x="486" y="936" width="770" height="104" rx="20" fill="#0d1728" stroke="#27476f" stroke-width="1.8" />
+        <text x="516" y="969" class="title-md">Interpretation</text>
+        <text x="516" y="993" class="body">This platform does not replace the accounting package. It sits above the existing stack as an auditable AI operating layer that:</text>
+        <text x="516" y="1015" class="body">1) reads and normalizes data, 2) detects gaps / exceptions, 3) orchestrates review & close, 4) produces controlled summaries and draft outputs.</text>
+      </svg>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <h3>Wat dit diagram expliciet laat zien</h3>
+        <ul>
+          <li>De AI-laag zit <strong>bovenop</strong> bestaande boekhoud- en documentbronnen.</li>
+          <li>De MVP is <strong>read-mostly</strong>: eerst analyseren, reviewen en orkestreren.</li>
+          <li>Menselijke review blijft verplicht voor materiële acties, externe communicatie en sign-off.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h3>VPS-first infrastructuurlogica</h3>
+        <ul>
+          <li>App, API, queue/workers, canonical DB en object storage draaien in een beheerde VPS-zone.</li>
+          <li>Externe AI-services worden afgeschermd via policy, logging en beperkte contextoverdracht.</li>
+          <li>Observability en backups zijn geen bijzaak maar onderdeel van de basisarchitectuur.</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h3>Strategische boodschap</h3>
+        <ul>
+          <li>Geen nieuw ERP, geen black-box AI, geen extra losse tool.</li>
+          <li>Wel: één platformervaring voor control, review, close en reporting.</li>
+          <li>Doel: sneller zicht op missing docs, exceptions, blockers en dossierstatus.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
