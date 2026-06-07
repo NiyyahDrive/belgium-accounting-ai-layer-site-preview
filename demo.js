@@ -5,7 +5,9 @@
     selectedDossierId: data.dossiers[0].id,
     requestStatus: 'Alle statussen',
     requestPriority: 'Alle prioriteiten',
-    summaryApproved: false
+    summaryApproved: false,
+    builderClientId: (data.dashboardBuilder.clients[0] || {}).id,
+    builderLastPrompt: ''
   };
 
   const $ = (id) => document.getElementById(id);
@@ -213,6 +215,384 @@
     pill.className = `status-pill ${state.summaryApproved ? 'status-approved' : 'status-review'}`;
   }
 
+  // ── AI Klantdashboard-bouwer (NLP) ──────────────────────────────────────────
+
+  const builder = data.dashboardBuilder;
+
+  const euro = (value) => {
+    const rounded = Math.round(value);
+    const sign = rounded < 0 ? '-' : '';
+    return `${sign}€${Math.abs(rounded).toLocaleString('nl-BE')}`;
+  };
+
+  function normalize(text) {
+    return (text || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function getBuilderClient() {
+    return builder.clients.find(c => c.id === state.builderClientId) || builder.clients[0];
+  }
+
+  // Bepaal de hoofdmetric (intent), of er een vergelijking gevraagd is en de periode.
+  function detectIntent(promptRaw) {
+    const text = ' ' + normalize(promptRaw) + ' ';
+    const scored = builder.intents.map(intent => {
+      let score = 0;
+      intent.keywords.forEach(kw => {
+        if (text.includes(' ' + normalize(kw))) score += 1;
+      });
+      return { intent, score };
+    }).sort((a, b) => b.score - a.score);
+
+    const primary = scored[0].score > 0 ? scored[0].intent : builder.intents[0];
+    // Tweede metric met een score voor vergelijking (bv. "omzet vs kosten").
+    const secondary = scored.find(s => s.intent.id !== primary.id && s.score > 0);
+    const quarterly = /(kwartaal|kwartalen|quartaal|per\s*q|q1|q2|quarter)/.test(text);
+    const comparison = Boolean(secondary) || /(vergelijk|versus|\bvs\b|tegenover|ten opzichte)/.test(text);
+
+    return {
+      primary,
+      secondary: secondary ? secondary.intent : null,
+      quarterly,
+      comparison: comparison && Boolean(secondary)
+    };
+  }
+
+  function seriesFor(client, metric) {
+    if (metric === 'margin') {
+      return client.series.revenue.map((rev, i) => rev - client.series.costs[i]);
+    }
+    return client.series[metric].slice();
+  }
+
+  function toQuarters(values) {
+    const q1 = values.slice(0, 3).reduce((a, b) => a + b, 0);
+    const q2 = values.slice(3, 6).reduce((a, b) => a + b, 0);
+    return [q1, q2];
+  }
+
+  function trendWord(values) {
+    const first = values[0];
+    const last = values[values.length - 1];
+    if (last > first * 1.03) return 'stijgt';
+    if (last < first * 0.97) return 'daalt';
+    return 'blijft stabiel';
+  }
+
+  function buildKpis(client, intent, values) {
+    const ytd = values.reduce((a, b) => a + b, 0);
+    const last = values[values.length - 1];
+    const prev = values[values.length - 2];
+    const momPct = prev !== 0 ? Math.round(((last - prev) / Math.abs(prev)) * 100) : 0;
+    const maxVal = Math.max(...values);
+
+    if (intent.metric === 'margin') {
+      const revYtd = client.series.revenue.reduce((a, b) => a + b, 0);
+      const marginPct = revYtd ? Math.round((ytd / revYtd) * 100) : 0;
+      return [
+        { label: 'Brutomarge YTD', value: euro(ytd), tone: 'good' },
+        { label: 'Marge-%', value: `${marginPct}%`, tone: marginPct >= 30 ? 'good' : 'warn' },
+        { label: 'Marge juni', value: euro(last), tone: 'neutral' },
+        { label: 'MoM', value: `${momPct >= 0 ? '+' : ''}${momPct}%`, tone: momPct >= 0 ? 'good' : 'risk' }
+      ];
+    }
+
+    const cumulLabel = intent.metric === 'receivables' ? 'Saldo juni' : `${intent.label} YTD`;
+    const cumulValue = intent.metric === 'receivables' ? euro(last) : euro(ytd);
+    return [
+      { label: cumulLabel, value: cumulValue, tone: intent.accent },
+      { label: 'Laatste maand (jun)', value: euro(last), tone: 'neutral' },
+      { label: 'MoM-verandering', value: `${momPct >= 0 ? '+' : ''}${momPct}%`, tone: momPct >= 0 ? 'good' : 'risk' },
+      { label: 'Hoogste maand', value: euro(maxVal), tone: 'neutral' }
+    ];
+  }
+
+  function toneColor(tone) {
+    return {
+      good: 'var(--green)', warn: 'var(--orange)', risk: 'var(--red)',
+      gold: 'var(--gold)', neutral: '#7da2d9'
+    }[tone] || '#7da2d9';
+  }
+
+  // Dependency-vrije SVG-grafieken (bar/line), schaalt mee met de viewport.
+  function svgBarChart(labels, seriesList) {
+    const W = 720, H = 280, padL = 64, padR = 20, padT = 20, padB = 40;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const allVals = seriesList.flatMap(s => s.values);
+    const rawMax = Math.max(...allVals, 0);
+    const rawMin = Math.min(...allVals, 0);
+    const max = rawMax === rawMin ? rawMax + 1 : rawMax;
+    const min = rawMin < 0 ? rawMin : 0;
+    const range = max - min || 1;
+    const y = (v) => padT + plotH - ((v - min) / range) * plotH;
+    const groups = labels.length;
+    const groupW = plotW / groups;
+    const barW = Math.min(46, (groupW * 0.7) / seriesList.length);
+    const zeroY = y(0);
+
+    let bars = '';
+    labels.forEach((label, gi) => {
+      const groupX = padL + gi * groupW + (groupW - barW * seriesList.length) / 2;
+      seriesList.forEach((s, si) => {
+        const v = s.values[gi];
+        const bx = groupX + si * barW;
+        const top = Math.min(y(v), zeroY);
+        const h = Math.abs(y(v) - zeroY);
+        bars += `<rect x="${bx.toFixed(1)}" y="${top.toFixed(1)}" width="${(barW - 4).toFixed(1)}" height="${Math.max(h, 1).toFixed(1)}" rx="4" fill="${toneColor(s.tone)}"><title>${s.name} ${label}: ${euro(v)}</title></rect>`;
+      });
+      bars += `<text x="${(padL + gi * groupW + groupW / 2).toFixed(1)}" y="${H - padB + 22}" text-anchor="middle" class="chart-axis">${label}</text>`;
+    });
+
+    // Gridlijnen + y-labels
+    let grid = '';
+    const ticks = 4;
+    for (let t = 0; t <= ticks; t++) {
+      const val = min + (range * t) / ticks;
+      const gy = y(val);
+      grid += `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${W - padR}" y2="${gy.toFixed(1)}" class="chart-grid" />`;
+      grid += `<text x="${padL - 10}" y="${(gy + 4).toFixed(1)}" text-anchor="end" class="chart-axis">${euro(val)}</text>`;
+    }
+    if (min < 0) grid += `<line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${W - padR}" y2="${zeroY.toFixed(1)}" class="chart-zero" />`;
+
+    return `<svg viewBox="0 0 ${W} ${H}" class="builder-chart-svg" role="img" preserveAspectRatio="xMidYMid meet">${grid}${bars}</svg>`;
+  }
+
+  function svgLineChart(labels, seriesList) {
+    const W = 720, H = 280, padL = 64, padR = 20, padT = 20, padB = 40;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const allVals = seriesList.flatMap(s => s.values);
+    const rawMax = Math.max(...allVals);
+    const rawMin = Math.min(...allVals, 0);
+    const max = rawMax === rawMin ? rawMax + 1 : rawMax;
+    const min = rawMin;
+    const range = max - min || 1;
+    const x = (i) => padL + (labels.length === 1 ? plotW / 2 : (i / (labels.length - 1)) * plotW);
+    const y = (v) => padT + plotH - ((v - min) / range) * plotH;
+
+    let grid = '';
+    const ticks = 4;
+    for (let t = 0; t <= ticks; t++) {
+      const val = min + (range * t) / ticks;
+      const gy = y(val);
+      grid += `<line x1="${padL}" y1="${gy.toFixed(1)}" x2="${W - padR}" y2="${gy.toFixed(1)}" class="chart-grid" />`;
+      grid += `<text x="${padL - 10}" y="${(gy + 4).toFixed(1)}" text-anchor="end" class="chart-axis">${euro(val)}</text>`;
+    }
+
+    let paths = '';
+    seriesList.forEach(s => {
+      const pts = s.values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+      const color = toneColor(s.tone);
+      paths += `<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />`;
+      s.values.forEach((v, i) => {
+        paths += `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4" fill="${color}"><title>${s.name} ${labels[i]}: ${euro(v)}</title></circle>`;
+      });
+    });
+    let axis = '';
+    labels.forEach((label, i) => {
+      axis += `<text x="${x(i).toFixed(1)}" y="${H - padB + 22}" text-anchor="middle" class="chart-axis">${label}</text>`;
+    });
+
+    return `<svg viewBox="0 0 ${W} ${H}" class="builder-chart-svg" role="img" preserveAspectRatio="xMidYMid meet">${grid}${paths}${axis}</svg>`;
+  }
+
+  function fillInsight(template, client, values) {
+    const ytd = values.reduce((a, b) => a + b, 0);
+    return template
+      .replace('{client}', client.name)
+      .replace('{trend}', trendWord(values))
+      .replace('{last}', euro(values[values.length - 1]))
+      .replace('{ytd}', euro(ytd));
+  }
+
+  function buildDashboard(client, detection) {
+    const { primary, secondary, quarterly, comparison } = detection;
+    const labels = quarterly ? builder.quarters : builder.months;
+
+    const makeSeries = (intent) => {
+      let vals = seriesFor(client, intent.metric);
+      if (quarterly) vals = toQuarters(vals);
+      return { name: intent.label, values: vals, tone: intent.accent };
+    };
+
+    const seriesList = [makeSeries(primary)];
+    if (comparison && secondary) seriesList.push(makeSeries(secondary));
+
+    const chartType = comparison ? 'bar' : primary.chart;
+    const chartSvg = chartType === 'line' ? svgLineChart(labels, seriesList) : svgBarChart(labels, seriesList);
+
+    const kpis = buildKpis(client, primary, seriesFor(client, primary.metric));
+
+    let insight = fillInsight(builder.insights[primary.metric], client, seriesFor(client, primary.metric));
+    if (comparison && secondary) {
+      insight += ` De vergelijking met ${secondary.label.toLowerCase()} maakt de verhouding in één oogopslag bespreekbaar met de klant.`;
+    }
+
+    const title = comparison && secondary
+      ? `${primary.label} vs ${secondary.label}`
+      : primary.title;
+
+    const sources = seriesList.map(s => {
+      const intent = builder.intents.find(i => i.label === s.name);
+      return (intent ? intent.source : '').replace('{id}', client.id);
+    }).filter(Boolean);
+
+    // Slimme follow-up suggesties op basis van wat NIET gevraagd is.
+    const followups = [];
+    if (!quarterly) followups.push(`${primary.label} per kwartaal`);
+    if (!comparison && primary.metric !== 'costs') followups.push(`Vergelijk ${primary.label.toLowerCase()} met kosten`);
+    followups.push('Hoe staat de cashflow ervoor?');
+    followups.push('Laat de openstaande klantfacturen zien');
+
+    return { title, labels, seriesList, chartSvg, kpis, insight, sources, followups, chartType };
+  }
+
+  function renderBuilderConsole() {
+    if (!$('builderClientSelect')) return;
+    $('builderClientSelect').innerHTML = builder.clients
+      .map(c => `<option value="${c.id}" ${c.id === state.builderClientId ? 'selected' : ''}>${c.name} — ${c.sector}</option>`)
+      .join('');
+    $('builderClientSelect').onchange = (e) => {
+      state.builderClientId = e.target.value;
+      if (state.builderLastPrompt) runBuilder(state.builderLastPrompt);
+    };
+
+    $('builderExamples').innerHTML = builder.examplePrompts
+      .map(p => `<button type="button" class="example-chip" data-example="${p.replace(/"/g, '&quot;')}">${p}</button>`)
+      .join('');
+    $('builderExamples').querySelectorAll('[data-example]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        $('builderPrompt').value = chip.dataset.example;
+        runBuilder(chip.dataset.example);
+      });
+    });
+
+    $('builderRunButton').onclick = () => runBuilder($('builderPrompt').value);
+    $('builderPrompt').onkeydown = (e) => {
+      if (e.key === 'Enter') runBuilder($('builderPrompt').value);
+    };
+  }
+
+  function renderBuilderPlaceholder() {
+    if (!$('builderOutput')) return;
+    $('builderOutput').innerHTML = `
+      <article class="card builder-empty">
+        <h3>Nog geen dashboard gebouwd</h3>
+        <p>Typ links een vraag in gewone taal of kies een voorbeeld. De AI-laag herkent de intentie en bouwt het klantdashboard met grafiek, kerncijfers, inzicht en bronverwijzing.</p>
+      </article>`;
+  }
+
+  function runBuilder(promptText) {
+    const text = (promptText || '').trim();
+    const out = $('builderOutput');
+    if (!out) return;
+    if (!text) { renderBuilderPlaceholder(); return; }
+
+    state.builderLastPrompt = text;
+    const client = getBuilderClient();
+    const detection = detectIntent(text);
+
+    // Korte "AI bouwt..." fase om de NLP-stap voelbaar te maken in de demo.
+    const steps = [
+      'Vraag begrepen (NLP)',
+      `Intentie: ${detection.primary.label}${detection.comparison && detection.secondary ? ' + ' + detection.secondary.label : ''}${detection.quarterly ? ' · per kwartaal' : ''}`,
+      'Bron gekoppeld + dashboard opgebouwd'
+    ];
+    out.innerHTML = `
+      <article class="card builder-building">
+        <div class="building-spinner"></div>
+        <div>
+          <strong>AI-laag bouwt het dashboard…</strong>
+          <ul class="building-steps">${steps.map(s => `<li>${s}</li>`).join('')}</ul>
+        </div>
+      </article>`;
+
+    const dash = buildDashboard(client, detection);
+
+    window.clearTimeout(runBuilder._t);
+    runBuilder._t = window.setTimeout(() => {
+      renderDashboardResult(client, text, dash);
+    }, 650);
+  }
+
+  function renderDashboardResult(client, promptText, dash) {
+    const out = $('builderOutput');
+    if (!out) return;
+
+    const legend = dash.seriesList.length > 1
+      ? `<div class="chart-legend">${dash.seriesList.map(s => `<span><i style="background:${toneColor(s.tone)}"></i>${s.name}</span>`).join('')}</div>`
+      : '';
+
+    out.innerHTML = `
+      <article class="card dashboard-result">
+        <div class="result-head">
+          <div>
+            <p class="section-kicker">${client.name}</p>
+            <h3>${dash.title}</h3>
+            <p class="result-prompt">Gevraagd: <em>“${promptText}”</em></p>
+          </div>
+          <span class="status-pill status-review">Concept · reviewer keurt goed</span>
+        </div>
+
+        <div class="result-kpis">
+          ${dash.kpis.map(k => `
+            <div class="result-kpi ${toneClass(k.tone)}">
+              <span>${k.label}</span>
+              <strong>${k.value}</strong>
+            </div>`).join('')}
+        </div>
+
+        <div class="result-chart">
+          ${legend}
+          ${dash.chartSvg}
+        </div>
+
+        <div class="result-bottom">
+          <div class="result-insight">
+            <h4>AI-inzicht</h4>
+            <p>${dash.insight}</p>
+            <div class="result-sources">
+              <span class="small-note">Bron:</span>
+              ${dash.sources.map(s => `<code>${s}</code>`).join('')}
+            </div>
+          </div>
+          <div class="result-governance">
+            <h4>Governance</h4>
+            <ul class="check-list">
+              <li>Cijfers zijn een AI-voorstel — niet vrijgegeven tot reviewer goedkeurt.</li>
+              <li>Elke widget verwijst naar de gebruikte boekhoudbron.</li>
+              <li>Geen autonome aanpassing of klantcommunicatie zonder approval gate.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="result-followups">
+          <span class="small-note">Volgende vraag:</span>
+          <div class="example-chips">
+            ${dash.followups.map(f => `<button type="button" class="example-chip" data-example="${f.replace(/"/g, '&quot;')}">${f}</button>`).join('')}
+          </div>
+        </div>
+      </article>`;
+
+    out.querySelectorAll('[data-example]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        $('builderPrompt').value = chip.dataset.example;
+        runBuilder(chip.dataset.example);
+      });
+    });
+  }
+
+  function renderBuilder() {
+    renderBuilderConsole();
+    if (state.builderLastPrompt) {
+      runBuilder(state.builderLastPrompt);
+    } else {
+      renderBuilderPlaceholder();
+    }
+  }
+
   function switchView(view) {
     state.activeView = view;
     document.querySelectorAll('[data-view-panel]').forEach(panel => {
@@ -243,6 +623,10 @@
       state.requestStatus = 'Alle statussen';
       state.requestPriority = 'Alle prioriteiten';
       state.summaryApproved = false;
+      state.builderClientId = (data.dashboardBuilder.clients[0] || {}).id;
+      state.builderLastPrompt = '';
+      const promptInput = $('builderPrompt');
+      if (promptInput) promptInput.value = '';
       renderAll();
     });
   }
@@ -257,6 +641,7 @@
     renderDossier();
     renderClose();
     renderSummary();
+    renderBuilder();
     switchView(state.activeView);
   }
 

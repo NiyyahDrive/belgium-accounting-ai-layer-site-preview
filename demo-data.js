@@ -173,5 +173,112 @@ window.DEMO_DATA = {
       { time: '09:05', actor: 'L. Peeters', event: 'Ontbrekende stukken gemarkeerd en follow-up voorbereid.' },
       { time: '09:18', actor: 'S. De Smet', event: 'Wacht op finale reviewbeslissing.' }
     ]
+  },
+
+  // ── AI Klantdashboard-bouwer (NLP) ──────────────────────────────────────────
+  // Gesimuleerde natural-language builder: het kantoor typt in gewone taal wat de
+  // klant wil zien; de intent-engine bouwt een dashboard uit deze demo-data.
+  dashboardBuilder: {
+    months: ['Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun'],
+    quarters: ['Q1 2026', 'Q2 2026'],
+    examplePrompts: [
+      'Toon de omzet per maand voor dit jaar',
+      'Vergelijk omzet en kosten per kwartaal',
+      'Hoe staat de cashflow ervoor?',
+      'Wat is de brutomarge en het rendement?',
+      'Laat de openstaande klantfacturen zien',
+      'Geef een BTW-overzicht voor de aangifte'
+    ],
+    // Per klant: maandreeksen in hele euro's (fictief, demo).
+    clients: [
+      {
+        id: 'northwind', name: 'Northwind Logistics BV', sector: 'Transport & logistiek',
+        series: {
+          revenue:     [182000, 175000, 198000, 205000, 211000, 224000],
+          costs:       [141000, 138000, 152000, 161000, 168000, 179000],
+          cashflow:    [ 28000, -12000,  41000,  19000,  33000,  22000],
+          vat:         [ 21000,  20100,  23400,  24100,  24800,  26300],
+          receivables: [ 64000,  58000,  71000,  83000,  91000,  88000]
+        }
+      },
+      {
+        id: 'atelier', name: 'Atelier Delta SRL', sector: 'Creatief agentschap',
+        series: {
+          revenue:     [42000, 39000, 48000, 51000, 67000, 72000],
+          costs:       [31000, 30000, 34000, 36000, 41000, 44000],
+          cashflow:    [ 8000,  4000, 11000,  9000, 18000, 15000],
+          vat:         [ 4800,  4500,  5500,  5900,  7700,  8300],
+          receivables: [12000, 14000, 16000, 21000, 28000, 24000]
+        }
+      },
+      {
+        id: 'greenharbor', name: 'Green Harbor Group', sector: 'Holdingstructuur',
+        series: {
+          revenue:     [310000, 305000, 318000, 322000, 330000, 341000],
+          costs:       [228000, 224000, 233000, 238000, 244000, 251000],
+          cashflow:    [ 61000,  58000,  64000,  59000,  70000,  67000],
+          vat:         [ 35600,  35100,  36500,  37000,  38000,  39200],
+          receivables: [102000,  98000, 110000,  95000, 104000,  99000]
+        }
+      },
+      {
+        id: 'studio', name: 'Studio Rombaut CommV', sector: 'Creatieve diensten',
+        series: {
+          revenue:     [28000, 26000, 31000, 33000, 35000, 38000],
+          costs:       [22000, 21000, 24000, 26000, 27000, 30000],
+          cashflow:    [ 3000, -2000,  5000,  1000,  4000,  2000],
+          vat:         [ 3200,  3000,  3600,  3800,  4000,  4400],
+          receivables: [ 9000, 11000, 13000, 18000, 22000, 19000]
+        }
+      }
+    ],
+    // Intents: keyword-sets die de gesproken/getypte vraag op een metric mappen.
+    intents: [
+      {
+        id: 'revenue', label: 'Omzet', metric: 'revenue', chart: 'bar', accent: 'good',
+        keywords: ['omzet', 'revenue', 'verkoop', 'verkopen', 'turnover', 'inkomsten', 'sales'],
+        title: 'Omzetontwikkeling',
+        source: 'ledger/{id}/grootboek-omzet.csv'
+      },
+      {
+        id: 'costs', label: 'Kosten', metric: 'costs', chart: 'bar', accent: 'warn',
+        keywords: ['kosten', 'uitgaven', 'expenses', 'lasten', 'cost'],
+        title: 'Kostenontwikkeling',
+        source: 'ledger/{id}/aankoopboek.csv'
+      },
+      {
+        id: 'margin', label: 'Marge & rendement', metric: 'margin', chart: 'line', accent: 'gold',
+        keywords: ['marge', 'brutomarge', 'winst', 'rendement', 'resultaat', 'profit', 'margin', 'winstgevend'],
+        title: 'Brutomarge en rendement',
+        source: 'ledger/{id}/resultatenrekening.csv'
+      },
+      {
+        id: 'cashflow', label: 'Cashflow', metric: 'cashflow', chart: 'bar', accent: 'neutral',
+        keywords: ['cashflow', 'kasstroom', 'liquiditeit', 'cash', 'liquide', 'geldstroom'],
+        title: 'Cashflow per maand',
+        source: 'bank/{id}/transacties-jun-2026.csv'
+      },
+      {
+        id: 'vat', label: 'BTW', metric: 'vat', chart: 'bar', accent: 'warn',
+        keywords: ['btw', 'vat', 'belasting', 'aangifte', 'tax'],
+        title: 'BTW-overzicht',
+        source: 'btw/{id}/aangifte-werkblad.xlsx'
+      },
+      {
+        id: 'receivables', label: 'Openstaande facturen', metric: 'receivables', chart: 'bar', accent: 'risk',
+        keywords: ['openstaande', 'openstaand', 'debiteuren', 'facturen', 'factuur', 'klantfacturen', 'te ontvangen', 'outstanding', 'dso', 'betaling'],
+        title: 'Openstaande klantfacturen',
+        source: 'debiteuren/{id}/openstaande-posten.csv'
+      }
+    ],
+    // Inzichtsjablonen per metric. {trend}/{last}/{ytd}/{client} worden ingevuld.
+    insights: {
+      revenue: 'De omzet van {client} {trend} over het halfjaar; juni komt uit op {last}. Year-to-date staat de teller op {ytd}. AI-laag markeert pieken voor reviewer-context vóór ze in het klantgesprek komen.',
+      costs: 'De kosten {trend}; in juni {last}. Cumulatief {ytd} dit jaar. Sterke stijgingen worden gesignaleerd voor reviewercontrole vóór ze als advies naar de klant gaan.',
+      margin: 'De brutomarge {trend}, met {last} in juni en {ytd} year-to-date. De AI-laag berekent dit uit omzet minus kosten en laat de reviewer het marge-percentage bevestigen.',
+      cashflow: 'De cashflow {trend}; juni sluit op {last}. Negatieve maanden worden expliciet uitgelicht zodat het kantoor liquiditeitsrisico vroeg met de klant kan bespreken.',
+      vat: 'Het BTW-saldo {trend}; juni {last}, samen {ytd} over zes maanden. Cijfers blijven een voorbereiding op de aangifte — geen automatische indiening.',
+      receivables: 'De openstaande klantfacturen {trend} naar {last} in juni. AI-laag stelt opvolgacties voor, maar versturen gebeurt pas na expliciete goedkeuring door het kantoor.'
+    }
   }
 };

@@ -48,6 +48,7 @@
             <button type="button" data-view="dossier">Dossierreview</button>
             <button type="button" data-view="close">Close cockpit</button>
             <button type="button" data-view="summary">AI-summary</button>
+            <button type="button" data-view="builder">Klantdashboard (AI)</button>
           </div>
         </div>
         <div class="rail-block compact-note">
@@ -199,6 +200,41 @@
               <div class="timeline" id="auditTrail"></div>
             </article>
           </div>
+        </section>
+
+        <section class="view-panel" data-view-panel="builder">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Klantdashboard-bouwer</p>
+              <h2>Bouw een klantdashboard in gewone taal</h2>
+              <p>Typ wat de klant wil zien — de AI-laag herkent de vraag (NLP) en bouwt live een dashboard uit de boekhouddata. Cijfers blijven een voorstel: het kantoor keurt goed vóór ze naar de klant gaan.</p>
+            </div>
+            <button class="ghost-button" type="button" data-switch-view="summary">Bekijk AI-governance</button>
+          </div>
+
+          <article class="card builder-console">
+            <div class="builder-controls">
+              <label class="builder-client">
+                Klant
+                <select id="builderClientSelect"></select>
+              </label>
+              <div class="builder-input-wrap">
+                <label for="builderPrompt">Vraag van het kantoor of de klant</label>
+                <div class="builder-input-row">
+                  <input id="builderPrompt" type="text" autocomplete="off"
+                    placeholder="bv. Toon de omzet per kwartaal en vergelijk met de kosten" />
+                  <button class="button button-primary" type="button" id="builderRunButton">Bouw dashboard</button>
+                </div>
+              </div>
+            </div>
+            <div class="builder-examples">
+              <span class="small-note">Probeer:</span>
+              <div class="example-chips" id="builderExamples"></div>
+            </div>
+            <p class="builder-engine-note small-note">NLP-engine herkent intentie, periode (maand/kwartaal) en vergelijkingen. Demo draait volledig lokaal op fictieve data — geen externe AI-call, geen echte klantdata.</p>
+          </article>
+
+          <div class="builder-output" id="builderOutput"></div>
         </section>
       </section>
     </main>
