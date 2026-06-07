@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fidaris Demo — Eén platformcockpit voor boekhoudkantoren</title>
+  <meta name="description" content="Lokale demo van Fidaris: één platformcockpit voor Belgische boekhoudkantoren met request center, dossierreview, close cockpit en governed AI-summary.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate">
+  <link rel="stylesheet" href="demo.css">
+</head>
+<body>
+  <div class="demo-shell">
+    <header class="demo-header">
+      <div>
+        <p class="eyebrow">Fidaris demo-omgeving</p>
+        <h1>Eén platformdemo voor Belgische boekhoudkantoren</h1>
+        <p class="intro">Klikbare lokale walkthrough met demo-data voor klantgesprekken. De flow toont hoe één cockpit dossiercontrole, requests, review en close samenbrengt zonder het boekhoudpakket te vervangen.</p>
+      </div>
+      <div class="header-actions">
+        <a class="button button-secondary" href="index.html">Terug naar website</a>
+        <button class="button button-primary" id="resetDemoButton" type="button">Reset demo-flow</button>
+      </div>
+    </header>
+
+    <section class="demo-banner card">
+      <div>
+        <strong>Demo-data</strong>
+        <p>Alle namen, dossiers en cijfers hieronder zijn fictief en uitsluitend bedoeld voor demo- en pilotgesprekken.</p>
+      </div>
+      <div class="banner-pills">
+        <span>Geen echte klantdata</span>
+        <span>Human-in-the-loop</span>
+        <span>Bronverwijzingen zichtbaar</span>
+      </div>
+    </section>
+
+    <main class="demo-layout">
+      <aside class="left-rail card">
+        <div class="rail-block">
+          <p class="rail-label">Demo-flow</p>
+          <ol class="flow-list" id="flowList"></ol>
+        </div>
+        <div class="rail-block">
+          <p class="rail-label">Platformnavigatie</p>
+          <div class="nav-list" id="viewButtons">
+            <button type="button" data-view="overview">Kantoorcockpit</button>
+            <button type="button" data-view="requests">Request center</button>
+            <button type="button" data-view="dossier">Dossierreview</button>
+            <button type="button" data-view="close">Close cockpit</button>
+            <button type="button" data-view="summary">AI-summary</button>
+          </div>
+        </div>
+        <div class="rail-block compact-note">
+          <p class="rail-label">Vertelspoor voor demo</p>
+          <p>Gebruik deze pagina om te tonen dat Fidaris niet uit losse AI-tools bestaat, maar uit één kantoorcockpit met rolgebaseerde views en governance.</p>
+        </div>
+      </aside>
+
+      <section class="main-stage">
+        <div class="top-metrics" id="topMetrics"></div>
+
+        <section class="view-panel active" data-view-panel="overview">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Kantoorcockpit</p>
+              <h2>Portfolio-overzicht voor het hele kantoor</h2>
+              <p>Toont in één scherm welke dossiers op schema zitten, waar blockers zitten en welke klantopvragingen vertragen.</p>
+            </div>
+            <button class="ghost-button" type="button" data-switch-view="requests">Ga naar request center</button>
+          </div>
+          <div class="overview-grid">
+            <article class="card focus-card">
+              <h3>Periodefocus</h3>
+              <ul id="focusList"></ul>
+            </article>
+            <article class="card blocker-card">
+              <h3>Open blockers</h3>
+              <div id="blockerList"></div>
+            </article>
+          </div>
+          <article class="card">
+            <div class="table-header">
+              <div>
+                <h3>Live pilotportefeuille</h3>
+                <p>Eén lijst voor operations, reviewers en partner — geen losse statusupdates per tool.</p>
+              </div>
+              <div class="legend-inline">
+                <span class="dot dot-risk"></span> urgent
+                <span class="dot dot-warn"></span> aandacht
+                <span class="dot dot-good"></span> op schema
+              </div>
+            </div>
+            <div class="portfolio-table" id="portfolioTable"></div>
+          </article>
+        </section>
+
+        <section class="view-panel" data-view-panel="requests">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Request center</p>
+              <h2>Alle klantopvragingen in één workflow</h2>
+              <p>Toon hoe mailbox, documentstatus en follow-up samenkomen in één lijst met prioriteit, eigenaar en deadline.</p>
+            </div>
+            <button class="ghost-button" type="button" data-switch-view="dossier">Open dossierdetail</button>
+          </div>
+          <div class="requests-toolbar card">
+            <label>
+              Status
+              <select id="requestStatusFilter"></select>
+            </label>
+            <label>
+              Prioriteit
+              <select id="requestPriorityFilter"></select>
+            </label>
+          </div>
+          <div class="request-list" id="requestList"></div>
+        </section>
+
+        <section class="view-panel" data-view-panel="dossier">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Dossierreview</p>
+              <h2 id="dossierTitle">Dossierdetail</h2>
+              <p>Gebruikt één dossierbeeld met stukken, findings, AI-signalen en bronverwijzingen. Reviewer blijft beslisser.</p>
+            </div>
+            <div class="dossier-picker-wrap">
+              <label>
+                Kies demo-dossier
+                <select id="dossierSelect"></select>
+              </label>
+            </div>
+          </div>
+          <div class="dossier-grid">
+            <article class="card">
+              <h3>Samenvatting</h3>
+              <dl class="summary-list" id="dossierSummary"></dl>
+            </article>
+            <article class="card">
+              <h3>Ontbrekende stukken</h3>
+              <ul class="check-list" id="missingDocsList"></ul>
+            </article>
+            <article class="card">
+              <h3>Review findings</h3>
+              <div class="finding-list" id="findingsList"></div>
+            </article>
+            <article class="card">
+              <h3>Bronverwijzingen</h3>
+              <ul class="source-list" id="sourceList"></ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="view-panel" data-view-panel="close">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Close cockpit</p>
+              <h2>Periodecontrole zonder verrassingen op het einde</h2>
+              <p>Maak zichtbaar welke dossiers door kunnen, welke escalatie vragen en welke partnerreview nog open staat.</p>
+            </div>
+            <button class="ghost-button" type="button" data-switch-view="summary">Bekijk AI-summary</button>
+          </div>
+          <div class="close-layout">
+            <article class="card">
+              <h3>Close-risico per fase</h3>
+              <div id="closeStages"></div>
+            </article>
+            <article class="card">
+              <h3>Escalaties deze week</h3>
+              <div class="escalation-list" id="escalationList"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view-panel" data-view-panel="summary">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Governed AI-summary</p>
+              <h2>AI-output als vertrekpunt, niet als eindbeslissing</h2>
+              <p>Gebruik dit scherm om te laten zien hoe AI-samenvattingen, bronverwijzingen en approvals in dezelfde cockpit blijven.</p>
+            </div>
+            <button class="ghost-button" type="button" id="approveSummaryButton">Markeer demo-review als goedgekeurd</button>
+          </div>
+          <div class="summary-layout">
+            <article class="card summary-card">
+              <div class="summary-status-row">
+                <span class="status-pill status-review" id="summaryStatusPill">Wacht op reviewer</span>
+                <span class="small-note">Approval gate blijft verplicht</span>
+              </div>
+              <h3 id="summaryHeadline"></h3>
+              <p id="summaryNarrative"></p>
+              <div class="summary-tags" id="summaryTags"></div>
+            </article>
+            <article class="card">
+              <h3>Controlepunten</h3>
+              <ul class="check-list" id="controlPointsList"></ul>
+            </article>
+            <article class="card">
+              <h3>Audit trail</h3>
+              <div class="timeline" id="auditTrail"></div>
+            </article>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="demo-data.js"></script>
+  <script src="demo.js"></script>
+</body>
+</html>

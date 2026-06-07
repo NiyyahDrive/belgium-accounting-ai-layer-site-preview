@@ -462,7 +462,8 @@ details p {
 .role-grid,
 .use-case-grid,
 .governance-grid,
-.pilot-card-grid {
+.pilot-card-grid,
+.demo-teaser-grid {
   display: grid;
   gap: 1rem;
 }
@@ -489,21 +490,60 @@ details p {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.demo-teaser-grid {
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+}
+
 .comparison-card,
 .value-card,
 .role-card,
 .use-case-card,
 .governance-card,
 .pilot-card,
-.faq-list details {
+.faq-list details,
+.demo-teaser-card {
   padding: 1.25rem;
 }
 
 .comparison-card ul,
 .value-card ul,
-.pilot-card ul {
+.pilot-card ul,
+.demo-teaser-card ul {
   margin: 0;
   padding-left: 1.1rem;
+}
+
+.section-demo {
+  background: linear-gradient(180deg, rgba(25, 41, 68, 0.04) 0%, rgba(255,255,255,0.56) 100%);
+}
+
+.demo-teaser-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: rgba(255,255,255,0.68);
+  box-shadow: var(--shadow);
+}
+
+.demo-teaser-card p,
+.demo-footnote {
+  color: var(--muted);
+}
+
+.demo-teaser-highlight {
+  background: linear-gradient(180deg, rgba(185, 146, 71, 0.09) 0%, rgba(255,255,255,0.8) 100%);
+  border-color: rgba(185, 146, 71, 0.24);
+}
+
+.demo-teaser-actions {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin: 1.15rem 0 0.75rem;
+}
+
+.demo-footnote {
+  margin: 0;
+  font-size: 0.94rem;
 }
 
 .value-card.card-plain {
@@ -708,7 +748,8 @@ details p {
   .role-grid,
   .use-case-grid,
   .governance-grid,
-  .pilot-card-grid {
+  .pilot-card-grid,
+  .demo-teaser-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -746,7 +787,8 @@ details p {
   .role-grid,
   .use-case-grid,
   .governance-grid,
-  .pilot-card-grid {
+  .pilot-card-grid,
+  .demo-teaser-grid {
     grid-template-columns: 1fr;
   }
 
@@ -757,7 +799,8 @@ details p {
   .role-grid,
   .use-case-grid,
   .governance-grid,
-  .pilot-card-grid {
+  .pilot-card-grid,
+  .demo-teaser-grid {
     display: grid;
   }
 
